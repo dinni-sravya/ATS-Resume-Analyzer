@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI ATS Resume Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            black: '#050510',
+                            dark: '#0f172a',
+                            primary: '#6366f1', // Indigo
+                            accent: '#06b6d4', // Cyan
+                            purple: '#a855f7',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'scan': 'scan 2s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(200%)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #020617;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.15) 0%, transparent 25%);
+            color: #e2e8f0;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-input {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: #06b6d4;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+            outline: none;
+        }
+
+        /* Neon Text */
+        .neon-text {
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background: linear-gradient(135deg, #22d3ee 0%, #818cf8 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        /* Circular Progress Ring */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 1.5s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden selection:bg-cyan-500 selection:text-white">
+
+    <!-- Neural Background Canvas -->
+    <canvas id="neuralCanvas" class="fixed inset-0 z-0 pointer-events-none opacity-40"></canvas>
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 glass-panel border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <div class="flex items-center gap-3">
+                    <div class="relative w-10 h-10 flex items-center justify-center bg-indigo-500/20 rounded-lg border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                        <i class="fa-solid fa-microchip text-indigo-400 text-xl"></i>
+                    </div>
+                    <span class="font-display font-bold text-2xl tracking-tight text-white">ATS<span class="text-cyan-400">Master</span></span>
+                </div>
+                <div>
+                    <a href="#" class="text-sm font-medium text-slate-400 hover:text-cyan-400 transition-colors tracking-wide">API DOCS</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="relative z-10 container mx-auto px-4 py-12 max-w-6xl">
+        
+        <!-- Hero Section -->
+        <div class="text-center mb-16 animate-float">
+            <div class="inline-block mb-4 px-4 py-1.5 rounded-full glass-panel border-cyan-500/30">
+                <span class="text-cyan-400 text-xs font-bold tracking-widest uppercase"><i class="fa-solid fa-bolt mr-2"></i>AI-Powered Engine v2.0</span>
+            </div>
+            <h1 class="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight">
+                Scan. Score. <br />
+                <span class="text-gradient">Get Hired.</span>
+            </h1>
+            <p class="text-lg text-slate-400 max-w-2xl mx-auto font-light">
+                Bypass the bots with our advanced resume parser. Get instant feedback on keywords, compatibility, and formatting.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Input Section -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-panel rounded-2xl p-1 shadow-2xl shadow-indigo-500/10">
+                    <div class="bg-[#0b1121]/80 rounded-xl p-6 md:p-8 backdrop-blur-xl">
+                        <h2 class="font-display text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <i class="fa-regular fa-file-pdf text-indigo-400"></i> Upload Data
+                        </h2>
+
+                        <form id="uploadForm" class="space-y-6">
+                            <!-- Drag & Drop Area -->
+                            <div class="group relative">
+                                <input type="file" id="resume" name="resume" accept=".pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" required>
+                                <div id="dropZone" class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center transition-all duration-300 group-hover:border-cyan-500 group-hover:bg-cyan-500/5 bg-slate-900/50">
+                                    <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-cyan-500/20 group-hover:text-cyan-400 text-slate-400">
+                                        <i class="fa-solid fa-cloud-upload-alt text-xl"></i>
+                                    </div>
+                                    <p class="text-slate-300 font-medium mb-1">Drop Resume PDF here</p>
+                                    <p class="text-slate-500 text-xs" id="fileName">Max file size: 10MB</p>
+                                </div>
+                            </div>
+
+                            <!-- Job Description -->
+                            <div class="relative group">
+                                <textarea id="job_description" name="job_description" rows="6" 
+                                    class="w-full rounded-xl glass-input p-4 text-sm font-light placeholder-slate-500 resize-none"
+                                    placeholder="Paste the Job Description here..." required></textarea>
+                                <div class="absolute bottom-3 right-3 text-slate-600 text-xs pointer-events-none">
+                                    <i class="fa-solid fa-align-left"></i>
+                                </div>
+                            </div>
+
+                            <!-- Action Button -->
+                            <button type="submit" id="analyzeBtn" class="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 p-[1px] shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]">
+                                <div class="relative flex items-center justify-center gap-3 bg-[#0b1121] text-white py-4 px-6 rounded-xl transition-all group-hover:bg-opacity-0">
+                                    <span class="font-bold tracking-wide">Run ATS Scan</span>
+                                    <i class="fa-solid fa-arrow-right-long group-hover:translate-x-1 transition-transform"></i>
+                                </div>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="lg:col-span-7">
+                
+                <!-- IDLE STATE -->
+                <div id="idleState" class="h-full min-h-[500px] flex flex-col items-center justify-center glass-panel rounded-2xl p-8 text-center border-dashed border-slate-700">
+                    <div class="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mb-4 animate-pulse-slow">
+                        <i class="fa-solid fa-radar text-3xl text-slate-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-500 mb-2">Ready to Analyze</h3>
+                    <p class="text-slate-600 max-w-xs">Upload your documents to see how well you match the job profile.</p>
+                </div>
+
+                <!-- LOADING STATE -->
+                <div id="loadingState" class="hidden h-full min-h-[500px] flex flex-col items-center justify-center glass-panel rounded-2xl p-8 relative overflow-hidden">
+                    <!-- Scanner Line -->
+                    <div class="absolute top-0 left-0 w-full h-1 bg-cyan-500 shadow-[0_0_15px_#06b6d4] z-10 animate-scan opacity-50"></div>
+                    
+                    <div class="relative z-20 text-center">
+                        <div class="inline-block relative w-24 h-24 mb-6">
+                            <div class="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
+                            <div class="absolute inset-0 border-4 border-t-cyan-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                            <div class="absolute inset-2 bg-slate-800 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-robot text-3xl text-indigo-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2 neon-text">AI Analysis in Progress</h3>
+                        <p class="text-slate-400">Extracting keywords & matching context...</p>
+                    </div>
+                    
+                    <!-- Code raining effect background overlay -->
+                    <div class="absolute inset-0 bg-[url('https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif')] opacity-5 mix-blend-screen bg-cover pointer-events-none"></div>
+                </div>
+
+                <!-- RESULTS DASHBOARD -->
+                <div id="resultsDashboard" class="hidden space-y-6">
+                    
+                    <!-- Top Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Score Card -->
+                        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <i class="fa-solid fa-chart-pie text-6xl text-cyan-500"></i>
+                            </div>
+                            <h3 class="text-sm uppercase tracking-wider text-slate-400 font-bold mb-4">ATS Compatibility</h3>
+                            <div class="flex items-center gap-6">
+                                <!-- Circular Progress -->
+                                <div class="relative w-24 h-24">
+                                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                                        <circle class="text-slate-700 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                        <circle id="scoreCircle" class="text-cyan-500 progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2"></circle>
+                                    </svg>
+                                    <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                        <span id="scoreText" class="text-2xl font-bold text-white">0%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p id="scoreVerdict" class="text-lg font-bold text-cyan-400 mb-1">Calculating...</p>
+                                    <p class="text-xs text-slate-500">Based on keyword density & context.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Missing Skills Card -->
+                        <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-pink-500">
+                            <h3 class="text-sm uppercase tracking-wider text-slate-400 font-bold mb-3">Critical Missing Skills</h3>
+                            <div id="missingSkillsList" class="flex flex-wrap gap-2">
+                                <!-- Populated via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Improvement Suggestions -->
+                    <div class="glass-panel rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-white mb-4 border-b border-white/10 pb-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400 mr-2"></i>AI Suggestions
+                        </h3>
+                        <div id="suggestionsContent" class="space-y-3 text-slate-300 font-light leading-relaxed">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Detailed Tabs -->
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <div class="flex border-b border-white/10">
+                            <button onclick="showDetail('ats')" id="btn-ats" class="flex-1 py-4 text-sm font-semibold text-cyan-400 bg-white/5 border-b-2 border-cyan-400 transition-all">Analysis</button>
+                            <button onclick="showDetail('resume')" id="btn-resume" class="flex-1 py-4 text-sm font-semibold text-slate-500 hover:text-white transition-all">Parsed Resume</button>
+                            <button onclick="showDetail('jd')" id="btn-jd" class="flex-1 py-4 text-sm font-semibold text-slate-500 hover:text-white transition-all">Parsed JD</button>
+                        </div>
+                        <div class="p-6 bg-[#0b1121]/50 max-h-60 overflow-y-auto">
+                            <div id="tab-ats" class="text-sm text-slate-300 whitespace-pre-line"></div>
+                            <div id="tab-resume" class="hidden text-sm text-slate-300 whitespace-pre-line"></div>
+                            <div id="tab-jd" class="hidden text-sm text-slate-300 whitespace-pre-line"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 mt-20 bg-[#050510]">
+        <div class="max-w-7xl mx-auto px-4 py-8 text-center">
+            <p class="text-slate-600 text-sm">© 2026 AI ATS Scanner. Designed for the Future.</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- 1. NEURAL BACKGROUND EFFECT (Canvas) ---
+        const canvas = document.getElementById('neuralCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 50; i++) particles.push(new Particle());
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 150) {
+                        ctx.strokeStyle = `rgba(6, 182, 212, ${1 - distance / 150})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        window.addEventListener('resize', () => { resize(); initParticles(); });
+        resize();
+        initParticles();
+        animateParticles();
+
+
+        // --- 2. UI LOGIC ---
+        const fileInput = document.getElementById('resume');
+        const fileNameDisplay = document.getElementById('fileName');
+        const dropZone = document.getElementById('dropZone');
+
+        // File Drag & Drop Visuals
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const name = e.target.files[0].name;
+                fileNameDisplay.innerHTML = `<span class="text-cyan-400 font-bold"><i class="fa-solid fa-check-circle mr-1"></i> ${name}</span>`;
+                dropZone.classList.replace('border-slate-700', 'border-cyan-500');
+                dropZone.classList.add('bg-cyan-900/20');
+            }
+        });
+
+        // Tab Switching
+        function showDetail(tab) {
+            ['ats', 'resume', 'jd'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`btn-${t}`);
+                btn.className = "flex-1 py-4 text-sm font-semibold text-slate-500 hover:text-white transition-all border-b-2 border-transparent";
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-${tab}`);
+            activeBtn.className = "flex-1 py-4 text-sm font-semibold text-cyan-400 bg-white/5 border-b-2 border-cyan-400 transition-all";
+        }
+
+        // Circular Progress Logic
+        function setProgress(percent) {
+            const circle = document.getElementById('scoreCircle');
+            const radius = circle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+            
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+            
+            // Color Logic
+            if(percent >= 80) circle.classList.replace('text-yellow-500', 'text-green-500') || circle.classList.replace('text-cyan-500', 'text-green-500');
+            else if(percent >= 60) circle.classList.replace('text-green-500', 'text-yellow-500') || circle.classList.replace('text-cyan-500', 'text-yellow-500');
+            else circle.classList.replace('text-green-500', 'text-pink-500') || circle.classList.replace('text-yellow-500', 'text-pink-500') || circle.classList.replace('text-cyan-500', 'text-pink-500');
+        }
+
+        // --- 3. FORM SUBMISSION ---
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // UI State Transitions
+            document.getElementById('idleState').classList.add('hidden');
+            document.getElementById('resultsDashboard').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            
+            const btn = document.getElementById('analyzeBtn');
+            const originalBtnContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<div class="flex items-center justify-center gap-2 bg-[#0b1121] text-white py-4 px-6 rounded-xl"><i class="fa-solid fa-spinner fa-spin text-cyan-400"></i> Processing...</div>`;
+
+            const formData = new FormData();
+            formData.append('resume', fileInput.files[0]);
+            formData.append('job_description', document.getElementById('job_description').value);
+
+            try {
+                // Try backend connection
+                const response = await fetch('/analyze', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                renderData(data);
+
+            } catch (error) {
+                console.warn("Using Demo Mode (Backend unreachable)");
+                // Simulate delay
+                await new Promise(r => setTimeout(r, 2500));
+                
+                // MOCK DATA for Demo
+                const mockData = {
+                    ats_result: `**Match Percentage: 78%**\n\n**Matching Skills:**\n- Python\n- Flask\n- REST API\n- HTML/CSS\n\n**Missing Skills:**\n- Docker\n- Kubernetes\n- AWS Cloud\n\n**Strengths:**\nYour experience with Python frameworks is strong. Good project history.\n\n**Improvement Suggestions:**\n1. Add a certification for Cloud services.\n2. Include metrics in your project descriptions (e.g., "Improved latency by 20%").\n3. Explicitly mention containerization tools.`,
+                    parsed_resume: `Name: Demo User\nSkills: Python, JS, React, Flask\nExperience: 3 Years at Tech Co.`,
+                    parsed_job_description: `Role: Backend Engineer\nReq: Python, Docker, AWS, Flask`
+                };
+                renderData(mockData);
+            } finally {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('resultsDashboard').classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerHTML = originalBtnContent;
+                
+                // Smooth scroll to results
+                document.getElementById('resultsDashboard').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+
+        function renderData(data) {
+            // 1. Text Content
+            document.getElementById('tab-ats').innerText = data.ats_result;
+            document.getElementById('tab-resume').innerText = data.parsed_resume;
+            document.getElementById('tab-jd').innerText = data.parsed_job_description;
+
+            // 2. Extract & Set Score
+            const match = data.ats_result.match(/(\d+)%/);
+            const score = match ? parseInt(match[1]) : 70;
+            
+            // Animate number
+            let currentScore = 0;
+            const scoreInterval = setInterval(() => {
+                if (currentScore >= score) clearInterval(scoreInterval);
+                else currentScore++;
+                document.getElementById('scoreText').innerText = currentScore + '%';
+            }, 20);
+            
+            setTimeout(() => setProgress(score), 100);
+
+            // Verdict Text
+            const verdictEl = document.getElementById('scoreVerdict');
+            if (score > 85) { verdictEl.innerText = "Excellent Match"; verdictEl.className = "text-lg font-bold text-green-400 mb-1"; }
+            else if (score > 60) { verdictEl.innerText = "Good Potential"; verdictEl.className = "text-lg font-bold text-yellow-400 mb-1"; }
+            else { verdictEl.innerText = "Needs Optimization"; verdictEl.className = "text-lg font-bold text-pink-500 mb-1"; }
+
+            // 3. Parse Missing Skills (Simple heuristic parsing)
+            const missingSection = data.ats_result.split('Missing Skills:')[1]?.split('**')[0] || "";
+            const missingSkills = missingSection.split('-').map(s => s.trim()).filter(s => s.length > 0);
+            
+            const missingContainer = document.getElementById('missingSkillsList');
+            missingContainer.innerHTML = '';
+            if (missingSkills.length > 0) {
+                missingSkills.slice(0, 5).forEach(skill => {
+                    const tag = document.createElement('span');
+                    tag.className = "px-3 py-1 rounded-md bg-pink-500/10 border border-pink-500/30 text-pink-400 text-xs font-bold";
+                    tag.innerText = skill.replace(/\n/g, '');
+                    missingContainer.appendChild(tag);
+                });
+            } else {
+                missingContainer.innerHTML = '<span class="text-slate-500 text-sm italic">No critical gaps found.</span>';
+            }
+
+            // 4. Parse Suggestions
+            const suggestionsSection = data.ats_result.split('Improvement Suggestions:')[1] || data.ats_result.split('Suggestions:')[1] || "";
+            const suggestions = suggestionsSection.split(/\d\./).filter(s => s.trim().length > 0);
+            
+            const suggestionsContainer = document.getElementById('suggestionsContent');
+            suggestionsContainer.innerHTML = '';
+            if (suggestions.length > 0) {
+                suggestions.forEach(suggestion => {
+                    const p = document.createElement('div');
+                    p.className = "flex items-start gap-2";
+                    p.innerHTML = `<i class="fa-solid fa-angle-right text-cyan-500 mt-1"></i><span>${suggestion.trim()}</span>`;
+                    suggestionsContainer.appendChild(p);
+                });
+            } else {
+                suggestionsContainer.innerHTML = '<p>Review the full analysis tab for details.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
