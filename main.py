@@ -18,7 +18,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # Initialize Gemini Client
 # RECOMMENDATION: Use os.environ.get("GEMINI_API_KEY") for security
-API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyD1afIYywGsJsqhTgQP1LlOFogI-bkZs4U")
+API_KEY = os.environ.get("GEMINI_API_KEY", "")
 client = genai.Client(api_key=API_KEY)
 
 # ==============================
